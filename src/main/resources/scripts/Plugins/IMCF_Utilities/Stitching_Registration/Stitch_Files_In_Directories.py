@@ -102,7 +102,9 @@ def write_tileconfig(
 
     empty_column = list(str(" ") * len(imagenames))
 
-    final_line = [";".join(i) for i in zip(image_filenames, empty_column, coordinates_xyz)]
+    final_line = [
+        ";".join(i) for i in zip(image_filenames, empty_column, coordinates_xyz)
+    ]
 
     with open(outCSV, "wb") as f:
         f.write(row_1 + "\n")
@@ -413,7 +415,7 @@ if __name__ == "__main__":
             bigdata = True
             IJ.log("Not enough free RAM, switching to BigData mode (slow)")
 
-        allimages = pathtools.listdir_matching(
+        all_images = pathtools.listdir_matching(
             source_dir, filetype, fullpath=True, sort=True
         )
 
@@ -424,7 +426,7 @@ if __name__ == "__main__":
         )
 
         # if filetype == "ome.tif":
-        #     write_tileconfig(source_dir, ome_metadata[0], allimages, ome_metadata[1], ome_metadata[2], ome_metadata[3])
+        #     write_tileconfig(source_dir, ome_metadata[0], all_images, ome_metadata[1], ome_metadata[2], ome_metadata[3])
         # else:
         write_tileconfig(
             source_dir,
@@ -459,19 +461,19 @@ if __name__ == "__main__":
                     ome_stage_metadata.calibration_unit,
                 )
                 path_to_image = save_current_image_as_bdv(
-                    allimages[0], filetype, source_dir
+                    all_images[0], filetype, source_dir
                 )
                 misc.convert_to_imaris(convert_to_ims, path_to_image)
                 shutil.rmtree(path, ignore_errors=True)  # remove temp folder
             else:
                 path_to_image = save_current_image_as_bdv(
-                    allimages[0], filetype, source_dir
+                    all_images[0], filetype, source_dir
                 )
                 misc.convert_to_imaris(convert_to_ims, path_to_image)
 
         if not bigdata and not bdv and not only_register:
             path_to_image = save_current_image_with_BF_as_ics1(
-                allimages[0], filetype, source_dir
+                all_images[0], filetype, source_dir
             )
 
         if convert_to_ims:
