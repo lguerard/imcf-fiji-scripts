@@ -369,6 +369,9 @@ def open_sequential_gcimages_from_folder(source, image_dimensions_czt):
 # ─── Main Code ────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
+    IJ.log("\\Clear")
+    IJ.log("Script starting")
+
     # start the process
     execution_start_time = time.time()
 
