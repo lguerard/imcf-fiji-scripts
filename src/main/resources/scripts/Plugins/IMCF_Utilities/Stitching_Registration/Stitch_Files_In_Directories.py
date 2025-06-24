@@ -6,6 +6,7 @@
 # @Boolean(label="conserve RAM but be slower", description="tick this if your previous attempt failed with <Out of memory> error", value="False") bigdata
 # @Boolean (label="convert stitched & fused image to Imaris5", description="convert the fused image to *.ims", value=True) convert_to_ims
 # @String (label="Send info email to: ", description="empty = skip", required="False") email_address
+# @Boolean(label="Individual multi-series files ?", value=False) individual_series
 # @Boolean(label="Only output TileConfiguration.registered txt file ?", value=False) only_register
 # @DatasetIOService io
 # @ImageDisplayService ImageDisplayService
@@ -101,7 +102,9 @@ def write_tileconfig(
 
     empty_column = list(str(" ") * len(imagenames))
 
-    final_line = [";".join(i) for i in zip(image_filenames, empty_column, coordinates_xyz)]
+    final_line = [
+        ";".join(i) for i in zip(image_filenames, empty_column, coordinates_xyz)
+    ]
 
     with open(outCSV, "wb") as f:
         f.write(row_1 + "\n")
@@ -140,13 +143,25 @@ def run_GC_stitcher(source, fusion_method, bigdata, quick, reg_threshold):
             + "image_output=[Fuse and display]"
         )
 
-    params = (
-        "type=[Positions from file] order=[Defined by TileConfiguration] "
-        + "directory=["
-        + source
-        + "] "
-        + "layout_file=TileConfiguration.txt"
-        + " fusion_method=["
+    if os.path.isfile(source):
+        params = (
+            "type=[Positions from file] "
+            + "order=[Defined by image metadata] "
+            + "multi_series_file=["
+            + source
+            + "]"
+        )
+    else:
+        params = (
+            "type=[Positions from file] order=[Defined by TileConfiguration] "
+            + "directory=["
+            + source
+            + "] "
+            + "layout_file=TileConfiguration.txt"
+        )
+
+    params += (
+        " fusion_method=["
         + fusion_method
         + "] "
         + "regression_threshold="
@@ -155,7 +170,7 @@ def run_GC_stitcher(source, fusion_method, bigdata, quick, reg_threshold):
         + "max/avg_displacement_threshold=2.50 "
         + "absolute_displacement_threshold=3.50 "
         + ("" if quick else "compute_overlap subpixel_accuracy ")
-        + str(mode),
+        + mode
     )
 
     print(params)
@@ -356,6 +371,9 @@ def open_sequential_gcimages_from_folder(source, image_dimensions_czt):
 # ─── Main Code ────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
+    IJ.log("\\Clear")
+    IJ.log("Script starting")
+
     # start the process
     execution_start_time = time.time()
 
@@ -364,7 +382,7 @@ if __name__ == "__main__":
 
     # In case script is ran batch
     source_info = pathtools.parse_path(source)
-    source = source_info["path"]
+    source = source_info["full"]
     # source = fix_ij_dirs(source)
     all_source_dirs = pathtools.find_dirs_containing_filetype(source, filetype)
 
@@ -377,7 +395,18 @@ if __name__ == "__main__":
     else:
         fusion_method = "Linear Blending"
 
-    for source_dir in all_source_dirs:
+    if individual_series:
+        all_source_dirs = [
+            source_dirs
+            * len(
+                pathtools.listdir_matching(
+                    source_dirs, filetype, fullpath=True, sort=True
+                )
+            )
+            for source_dirs in all_source_dirs
+        ]
+
+    for dir_index, source_dir in enumerate(all_source_dirs):
         IJ.log("Now working on " + source_dir)
         print("bigdata= ", str(bigdata))
         free_memory_bytes = MemoryTools().totalAvailableMemory()
@@ -386,14 +415,18 @@ if __name__ == "__main__":
             bigdata = True
             IJ.log("Not enough free RAM, switching to BigData mode (slow)")
 
-        allimages = pathtools.listdir_matching(
+        all_images = pathtools.listdir_matching(
             source_dir, filetype, fullpath=True, sort=True
         )
 
-        ome_stage_metadata = bf.get_stage_coords(allimages)
+        ome_stage_metadata = (
+            bf.get_stage_coords(all_images)
+            if not individual_series
+            else bf.get_stage_coords(all_images[dir_index])
+        )
 
         # if filetype == "ome.tif":
-        #     write_tileconfig(source_dir, ome_metadata[0], allimages, ome_metadata[1], ome_metadata[2], ome_metadata[3])
+        #     write_tileconfig(source_dir, ome_metadata[0], all_images, ome_metadata[1], ome_metadata[2], ome_metadata[3])
         # else:
         write_tileconfig(
             source_dir,
@@ -404,7 +437,13 @@ if __name__ == "__main__":
             ome_stage_metadata.relative_coordinates_z,
         )
 
-        run_GC_stitcher(source_dir, fusion_method, bigdata, quick, reg_threshold)
+        run_GC_stitcher(
+            source_dir if not individual_series else all_images[dir_index],
+            fusion_method,
+            bigdata,
+            quick,
+            reg_threshold,
+        )
 
         calibrate_current_image(
             ome_stage_metadata.image_calibration,
@@ -422,19 +461,19 @@ if __name__ == "__main__":
                     ome_stage_metadata.calibration_unit,
                 )
                 path_to_image = save_current_image_as_bdv(
-                    allimages[0], filetype, source_dir
+                    all_images[0], filetype, source_dir
                 )
                 misc.convert_to_imaris(convert_to_ims, path_to_image)
                 shutil.rmtree(path, ignore_errors=True)  # remove temp folder
             else:
                 path_to_image = save_current_image_as_bdv(
-                    allimages[0], filetype, source_dir
+                    all_images[0], filetype, source_dir
                 )
                 misc.convert_to_imaris(convert_to_ims, path_to_image)
 
         if not bigdata and not bdv and not only_register:
             path_to_image = save_current_image_with_BF_as_ics1(
-                allimages[0], filetype, source_dir
+                all_images[0], filetype, source_dir
             )
 
         if convert_to_ims:
