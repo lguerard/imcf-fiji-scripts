@@ -438,7 +438,7 @@ if __name__ == "__main__":
         )
 
         run_GC_stitcher(
-            source_dir if not individual_series else all_images[dir_index],
+            source_dir if not individual_series else [all_images[dir_index]],
             fusion_method,
             bigdata,
             quick,
