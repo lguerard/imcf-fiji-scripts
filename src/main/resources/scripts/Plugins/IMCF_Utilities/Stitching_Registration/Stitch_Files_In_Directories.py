@@ -380,7 +380,7 @@ if __name__ == "__main__":
 
     # In case script is ran batch
     source_info = pathtools.parse_path(source)
-    source = source_info["path"]
+    source = source_info["full"]
     # source = fix_ij_dirs(source)
     all_source_dirs = pathtools.find_dirs_containing_filetype(source, filetype)
 
