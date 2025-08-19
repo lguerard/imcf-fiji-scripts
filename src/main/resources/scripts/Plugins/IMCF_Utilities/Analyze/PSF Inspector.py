@@ -1231,7 +1231,7 @@ if __name__ == "__main__":
                             + str(region_index)
                             + ", WILL BE SKIPPED"
                         )
-                        continue
+                        
                     try:
                         FWHMl = 2 * xy_voxel * math.sqrt(k)
                     except ValueError:
