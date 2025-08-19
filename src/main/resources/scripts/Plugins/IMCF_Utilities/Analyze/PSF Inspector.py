@@ -1207,16 +1207,25 @@ if __name__ == "__main__":
                             y_max = max(y_plot_lat_fit[i], yy_plot_lat_fit[i])
 
                     HM = (y_max - y_min) / 2
-                    k = (
-                        -2
-                        * fit_results_lateral_1[3]
-                        * fit_results_lateral_1[3]
-                        * math.log(
-                            (HM - fit_results_lateral_1[0])
-                            / (fit_results_lateral_1[1] - fit_results_lateral_1[0])
+                    try:
+                        k = (
+                            -2
+                            * fit_results_lateral_1[3]
+                            * fit_results_lateral_1[3]
+                            * math.log(
+                                (HM - fit_results_lateral_1[0])
+                                / (fit_results_lateral_1[1] - fit_results_lateral_1[0])
+                            )
                         )
-                    )
-
+                    except (ValueError, ZeroDivisionError):
+                        IJ.log(
+                            "ISSUE WITH CHANNEL "
+                            + str(channel)
+                            + " AND ROI "
+                            + str(region_index)
+                            + ", WILL BE SKIPPED"
+                        )
+                        continue
                     try:
                         FWHMl = 2 * xy_voxel * math.sqrt(k)
                     except ValueError:
