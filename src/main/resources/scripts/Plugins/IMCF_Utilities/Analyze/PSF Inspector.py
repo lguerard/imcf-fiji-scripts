@@ -42,12 +42,14 @@ from loci.plugins.out import Exporter
 from fr.igred.omero import Client
 from fr.igred.omero.roi import ROIWrapper
 from fr.igred.omero.annotations import TableWrapper, MapAnnotationWrapper
+from fr.igred.omero.exception import AccessException
 
 from loci.formats.in import DefaultMetadataOptions, MetadataLevel
 
 from omero.gateway.model import ImageData, TableData, TableDataColumn
 from omero.model import NamedValue
 from omero.cmd import OriginalMetadataRequest
+from omero.gateway.exception import DSAccessException
 # ─── FUNCTIONS ──────────────────────────────────────────────────────────────────
 
 def BFImport(indivFile):
@@ -221,6 +223,7 @@ def BFExport(imp, savepath):
     exporter = Exporter(plugin, imp)
     exporter.run()
 
+
 def progress_bar(progress, total, line_number, prefix=""):
     """Progress bar for the IJ log window
 
@@ -264,6 +267,7 @@ def add_annotation(user_client, repository_wpr, dict, header):
     map_annotation_wpr.setNameSpace(header)
     repository_wpr.addMapAnnotation(user_client, map_annotation_wpr)
 
+
 def delete_annotation(user_client, repository_wpr):
     """Delete annotations linked to object
 
@@ -277,6 +281,7 @@ def delete_annotation(user_client, repository_wpr):
     """
     kv_pairs = repository_wpr.getMapAnnotations(user_client)
     user_client.delete(kv_pairs)
+
 
 def save_rois_to_omero(user_client, image_wpr, rm):
     """Save ROIs to OMERO linked to the image
@@ -667,7 +672,11 @@ def upload_array_as_omero_table(user_client, data, columns, image_wpr):
     table_data = TableData(columns, data)
     table_wpr = TableWrapper(table_data)
     table_wpr.setName("PSF Inspector Table")
-    dataset_wpr.addTable(user_client, table_wpr)
+    try:
+        dataset_wpr.addTable(user_client, table_wpr)
+    except (AccessException, DSAccessException) as e:
+        IJ.log("%s error when trying to upload OMERO table...skipping" % e)
+    
 
 def create_table_columns(headings):
     """Create the table headings from the ImageJ results table
@@ -1207,15 +1216,24 @@ if __name__ == "__main__":
                             y_max = max(y_plot_lat_fit[i], yy_plot_lat_fit[i])
 
                     HM = (y_max - y_min) / 2
-                    k = (
-                        -2
-                        * fit_results_lateral_1[3]
-                        * fit_results_lateral_1[3]
-                        * math.log(
-                            (HM - fit_results_lateral_1[0])
-                            / (fit_results_lateral_1[1] - fit_results_lateral_1[0])
+                    try:
+                        k = (
+                            -2
+                            * fit_results_lateral_1[3]
+                            * fit_results_lateral_1[3]
+                            * math.log(
+                                (HM - fit_results_lateral_1[0])
+                                / (fit_results_lateral_1[1] - fit_results_lateral_1[0])
+                            )
                         )
-                    )
+                    except (ValueError, ZeroDivisionError):
+                        IJ.log(
+                            "ISSUE WITH CHANNEL "
+                            + str(channel)
+                            + " AND ROI "
+                            + str(region_index)
+                            + ", WILL BE SKIPPED"
+                        )
 
                     try:
                         FWHMl = 2 * xy_voxel * math.sqrt(k)
