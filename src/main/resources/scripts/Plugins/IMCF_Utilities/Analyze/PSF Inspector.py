@@ -42,12 +42,14 @@ from loci.plugins.out import Exporter
 from fr.igred.omero import Client
 from fr.igred.omero.roi import ROIWrapper
 from fr.igred.omero.annotations import TableWrapper, MapAnnotationWrapper
+from fr.igred.omero.exception import AccessException
 
 from loci.formats.in import DefaultMetadataOptions, MetadataLevel
 
 from omero.gateway.model import ImageData, TableData, TableDataColumn
 from omero.model import NamedValue
 from omero.cmd import OriginalMetadataRequest
+from omero.gateway.exception import DSAccessException
 # ─── FUNCTIONS ──────────────────────────────────────────────────────────────────
 
 def BFImport(indivFile):
@@ -667,7 +669,11 @@ def upload_array_as_omero_table(user_client, data, columns, image_wpr):
     table_data = TableData(columns, data)
     table_wpr = TableWrapper(table_data)
     table_wpr.setName("PSF Inspector Table")
-    dataset_wpr.addTable(user_client, table_wpr)
+    try:
+        dataset_wpr.addTable(user_client, table_wpr)
+    except (AccessException, DSAccessException) as e:
+        IJ.log("%s error when trying to upload OMERO table...skipping" % e)
+    
 
 def create_table_columns(headings):
     """Create the table headings from the ImageJ results table
