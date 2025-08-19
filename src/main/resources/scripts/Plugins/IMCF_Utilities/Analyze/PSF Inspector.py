@@ -223,6 +223,7 @@ def BFExport(imp, savepath):
     exporter = Exporter(plugin, imp)
     exporter.run()
 
+
 def progress_bar(progress, total, line_number, prefix=""):
     """Progress bar for the IJ log window
 
@@ -266,6 +267,7 @@ def add_annotation(user_client, repository_wpr, dict, header):
     map_annotation_wpr.setNameSpace(header)
     repository_wpr.addMapAnnotation(user_client, map_annotation_wpr)
 
+
 def delete_annotation(user_client, repository_wpr):
     """Delete annotations linked to object
 
@@ -279,6 +281,7 @@ def delete_annotation(user_client, repository_wpr):
     """
     kv_pairs = repository_wpr.getMapAnnotations(user_client)
     user_client.delete(kv_pairs)
+
 
 def save_rois_to_omero(user_client, image_wpr, rm):
     """Save ROIs to OMERO linked to the image
@@ -1231,7 +1234,7 @@ if __name__ == "__main__":
                             + str(region_index)
                             + ", WILL BE SKIPPED"
                         )
-                        
+
                     try:
                         FWHMl = 2 * xy_voxel * math.sqrt(k)
                     except ValueError:
